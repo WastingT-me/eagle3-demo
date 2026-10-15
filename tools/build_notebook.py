@@ -67,8 +67,8 @@ DRAFTERS = [
 VIDEOS_DRIVE_DIR = "videos"
 # Постоянная ссылка: сайт на GitHub Pages находит этот сервер через секретный гист.
 # BACKEND_GIST - id гиста (конец его адреса); нужен секрет Colab GH_TOKEN (токен GitHub classic с правом gist).
-# Пусто - только временная ссылка trycloudflare.
-BACKEND_GIST = ""
+# Пусто - только временная ссылка trycloudflare. Без секрета GH_TOKEN ноутбук напишет, что адрес не записан, и демо работает по временной ссылке.
+BACKEND_GIST = "e7b489608c0c3c8eee1d15498a86872e"
 PAGES_URL = "https://wastingt-me.github.io/eagle3-demo"
 
 import os
