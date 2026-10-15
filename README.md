@@ -70,6 +70,19 @@ tools/build_notebook.py   пересобирает ноутбук из backend/ 
 
 Адрес меняется при каждом перезапуске Colab.
 
+## Постоянная ссылка
+
+Сайт публикуется на GitHub Pages (`.github/workflows/pages.yml`, при каждом пуше в main): **https://wastingt-me.github.io/eagle3-demo/**. Ссылка не меняется, а сервер на Colab она находит сама: при каждом запуске ноутбук пишет текущий адрес туннеля trycloudflare в секретный гист, страница читает его оттуда и подключается. Пока Colab не запущен, страница показывает запись генерации.
+
+Один раз:
+1. **Settings → Pages → Build and deployment → Source: GitHub Actions.** Затем Actions → pages → Run workflow (или любой пуш в main).
+2. **Гист.** https://gist.github.com → имя файла `eagle3-backend.json`, содержимое `{}` → **Create secret gist**. Id гиста - последняя часть его адреса.
+3. **Id гиста в страницу:** в `site/demo.html` строка `<meta name="eagle3-backend" content="gist:ID">`, закоммитить в main.
+4. **Токен.** https://github.com/settings/tokens → Generate new token (classic), только право **gist**, срок - после презентации. В Colab слева значок ключа → секрет **`GH_TOKEN`** с этим токеном и доступ ноутбука к нему.
+5. **Ноутбук:** в первой ячейке `BACKEND_GIST = "ID"`.
+
+После Run all последняя ячейка печатает «Постоянная ссылка: https://wastingt-me.github.io/eagle3-demo/demo.html». Ссылка `?backend=https://xxxx.trycloudflare.com` по-прежнему перекрывает гист.
+
 ## Как обновить демо
 
 Правите файлы в `backend/` или `site/`, затем пересобираете ноутбук, потому что код демо упакован в него: `python tools/build_notebook.py .`. Коммитите и изменённые файлы, и `colab/eagle3_demo.ipynb`. Значок «Open in Colab» вверху всегда открывает ноутбук из ветки main.

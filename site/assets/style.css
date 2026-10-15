@@ -226,14 +226,17 @@ footer { padding-block: 30px 44px; color: var(--mut); font-size: 14px; border-to
    правее него: 100vw - 0.72 * ширина видео, справа отступ 2/3 левого, а подпись с его именем стоит под ним. */
 .bg-video { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; display: none;
   --bgw: max(114vw, 177.78vh) }
-.has-bg .bg-video { display: block }
+.bg-layout .bg-video { display: block }
+.bg-video video { opacity: 0; transition: opacity .6s }
+.has-bg .bg-video video { opacity: 1 }
 .bg-video video { position: absolute; right: 0; bottom: 0; width: var(--bgw); height: auto }
 .bg-video::after { content: ""; position: absolute; inset: 0; background: rgba(7, 6, 15, .66) }
-.has-bg { background-image: none }
+/* вёрстка под видео (bg-layout) стоит в разметке сразу, до загрузки видео: страница не прыгает, когда видео появляется */
+.bg-layout { background-image: none }
 .video-person, .sound-btn { display: none }
 @media (min-width: 1200px) {
-  .has-bg { --free: max(16px, calc(100vw - .72 * max(114vw, 177.78vh) + 24px)) }
-  .has-bg main.wrap { margin-left: var(--free); margin-right: calc(var(--free) * 2 / 3); max-width: none;
+  .bg-layout { --free: max(16px, calc(100vw - .72 * max(114vw, 177.78vh) + 24px)) }
+  .bg-layout main.wrap { margin-left: var(--free); margin-right: calc(var(--free) * 2 / 3); max-width: none;
     padding-left: 0; padding-right: 0 }
   /* человек слева остаётся ярким, под контентом фон затемнён */
   .bg-video::after { background: linear-gradient(90deg, rgba(7, 6, 15, .08) calc(var(--free) - 140px), rgba(7, 6, 15, .74) calc(var(--free) + 40px)) }

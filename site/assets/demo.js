@@ -672,6 +672,18 @@
 
   const param = new URLSearchParams(location.search).get("backend");
   const same = location.protocol.startsWith("http") ? location.origin : null;
-  connect([param && param.replace(/\/+$/, ""), same, store.get("eagle3-backend")]);
+  // постоянная ссылка: страница на GitHub Pages находит сервер Colab по <meta name="eagle3-backend">,
+  // где "gist:ID" - гист, в который ноутбук при каждом запуске пишет текущий адрес туннеля (или сам адрес)
+  async function fixedBackend() {
+    const v = ((document.querySelector('meta[name="eagle3-backend"]') || {}).content || "").trim();
+    if (!v.startsWith("gist:")) return v;
+    try {
+      const r = await fetch("https://api.github.com/gists/" + v.slice(5), { cache: "no-store" });
+      const f = (await r.json()).files["eagle3-backend.json"];
+      return JSON.parse(f.content).url || "";
+    } catch { return ""; }
+  }
+  const clean = u => u && u.replace(/\/+$/, "");
+  fixedBackend().then(fixed => connect([clean(param), same, clean(fixed), store.get("eagle3-backend")]));
   renderTree();
 })();
