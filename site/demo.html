@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EAGLE-3 DEMO</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Russo+One&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body class="demo-page">
+<div class="bg-video" aria-hidden="true"><video id="bg-video" muted loop playsinline preload="auto"></video></div>
+<audio id="bg-audio" loop preload="auto"></audio>
+<div class="video-person" id="video-person" hidden></div>
+<button class="sound-btn" id="sound-btn" type="button" hidden aria-pressed="false">Звук: выкл</button>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="demo.html"><img class="logo" src="assets/llama.png" width="42" height="44" alt=""><span><span class="neon-c">EAGLE-3</span> <span class="neon-m">DEMO</span></span></a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="demo-head">
+    <!-- надпись убрана, место под ней оставлено: страница по высоте как с заголовком -->
+    <h1 class="ghost" aria-hidden="true"><span class="neon-c">Баттл</span> <span class="neon-m">моделей</span></h1>
+    <div class="panel intro"><p>Выберите две модели из пула: таргет <b>[target]</b> Llama-3.1-8B-Instruct генерирует без драфтера, а драфтеры <b>[draft]</b> authors (официальный драфтер EAGLE-3 от авторов метода) и ours (наш, слои 16, 22, 29 и fc_norm) ускоряют его. На каждом шаге драфтер предлагает дерево из 60 вариантов продолжения, а таргет-модель проверяет его за один проход и принимает самую длинную совпавшую ветку.</p></div>
+    <div class="server">
+      <span class="pill" id="srv-pill"><i></i><span id="srv-text">Проверяю демо-сервер…</span></span>
+      <details id="srv-details">
+        <summary>Адрес сервера</summary>
+        <form id="srv-form">
+          <input type="url" id="srv-url" placeholder="https://xxxx.trycloudflare.com" aria-label="Адрес демо-сервера">
+          <button class="btn" type="submit">Подключить</button>
+        </form>
+      </details>
+    </div>
+  </section>
+
+  <section class="panel ask" aria-label="Запрос">
+    <div class="versus">
+      <label data-slot="0">Модель 1<select id="m0"></select></label>
+      <span class="vs" aria-hidden="true">VS</span>
+      <label data-slot="1">Модель 2<select id="m1"></select></label>
+    </div>
+    <label for="prompt" class="label">Запрос</label>
+    <textarea id="prompt" rows="3">Write a Python function that reverses a singly linked list. Give the code and one sentence of explanation.</textarea>
+    <div class="chips" id="chips">
+      <button class="chip" type="button" aria-pressed="true" data-prompt="Write a Python function that reverses a singly linked list. Give the code and one sentence of explanation."><b>Код</b><span>Разворот связного списка на Python</span></button>
+      <button class="chip" type="button" aria-pressed="false" data-prompt="A shop sells pens for $3 and notebooks for $5. I bought 4 pens and 2 notebooks and paid with a $50 bill. How much change do I get?"><b>Математика</b><span>Сдача с 50 долларов в магазине</span></button>
+      <button class="chip" type="button" aria-pressed="false" data-prompt="Назови три планеты Солнечной системы и опиши каждую одним предложением. Отвечай на русском."><b>По-русски</b><span>Три планеты, по предложению на каждую</span></button>
+      <button class="chip" type="button" aria-pressed="false" data-prompt="Explain in three short sentences how a hash table works."><b>Объяснение</b><span>Как работает хеш-таблица, в трёх фразах</span></button>
+      <button class="chip" type="button" aria-pressed="false" data-prompt="Convert to JSON: name Alice, age 30, city Paris, hobbies reading and chess. Output only the JSON."><b>Данные</b><span>Привести описание к JSON</span></button>
+    </div>
+    <div class="controls">
+      <label>Длина ответа
+        <select id="max-tokens"><option value="256">256 токенов</option><option value="512">512 токенов</option><option value="1024" selected>1024 токена</option></select>
+      </label>
+      <label>Температура
+        <select id="temperature"><option value="0" selected>0</option><option value="0.6">0.6</option><option value="1">1.0</option></select>
+      </label>
+      <label id="engine-box" hidden>Движок
+        <select id="engine"><option value="eagle">EAGLE · с деревом</option><option value="sglang">SGLang · без дерева</option></select>
+      </label>
+      <label>Скорость показа
+        <select id="speed"><option value="1" selected>реальная</option><option value="0.25">в 4 раза медленнее</option><option value="0.1">в 10 раз медленнее</option></select>
+      </label>
+      <div class="go">
+        <button class="btn" id="save" type="button" hidden>Скачать запись</button>
+        <button class="btn" id="again" type="button" hidden>Повторить</button>
+        <button class="btn" id="stop" type="button" hidden>Остановить</button>
+        <button class="btn primary" id="run" type="button">Запустить генерацию</button>
+      </div>
+    </div>
+    <div class="engine-warn" id="engine-warn" hidden>
+      <p id="engine-warn-text"></p>
+      <div class="go"><button class="btn" id="engine-no" type="button">Отмена</button><button class="btn primary" id="engine-yes" type="button">Сменить движок</button></div>
+    </div>
+  </section>
+
+  <div class="race-bar">
+    <div class="verdict" id="verdict" hidden><span class="medal" aria-hidden="true">🥇</span><b id="speedup">—</b><span id="verdict-text">быстрее</span></div>
+  </div>
+
+  <section class="lanes">
+    <article class="panel lane" data-slot="0">
+      <div class="lane-head"><h3><i></i><span data-k="name">Модель 1</span></h3><span class="state" data-k="state"></span></div>
+      <div class="lane-meta" data-k="meta"></div>
+      <div class="stats">
+        <div class="stat"><b data-k="tps">—</b><span>токенов/с</span></div>
+        <div class="stat"><b data-k="tau">—</b><span>токенов за шаг</span></div>
+        <div class="stat"><b data-k="steps">—</b><span>шагов таргета</span></div>
+        <div class="stat"><b data-k="time">—</b><span>время GPU</span></div>
+      </div>
+      <div class="bar"><i data-k="bar"></i></div>
+      <div class="out" data-k="out" aria-live="off"><span class="think"></span><span class="answer"></span></div>
+    </article>
+    <article class="panel lane" data-slot="1">
+      <div class="lane-head"><h3><i></i><span data-k="name">Модель 2</span></h3><span class="state" data-k="state"></span></div>
+      <div class="lane-meta" data-k="meta"></div>
+      <div class="stats">
+        <div class="stat"><b data-k="tps">—</b><span>токенов/с</span></div>
+        <div class="stat"><b data-k="tau">—</b><span>токенов за шаг</span></div>
+        <div class="stat"><b data-k="steps">—</b><span>шагов таргета</span></div>
+        <div class="stat"><b data-k="time">—</b><span>время GPU</span></div>
+      </div>
+      <div class="bar"><i data-k="bar"></i></div>
+      <div class="out" data-k="out" aria-live="off"><span class="think"></span><span class="answer"></span></div>
+    </article>
+  </section>
+
+  <section class="panel tree-panel" aria-label="Дерево драфтера">
+    <div class="tree-head">
+      <h2>Дерево драфтера</h2>
+      <div class="tree-tabs" id="tree-tabs" role="group" aria-label="Чьё дерево показать"></div>
+      <div class="legend"><span><i class="lt"></i>токен таргета</span><span><i class="la"></i>принят</span><span><i class="lr"></i>отвергнут (яркость = уверенность драфтера)</span></div>
+    </div>
+    <div class="scrub"><label for="step">Шаг</label><input type="range" id="step" min="0" max="0" value="0" disabled><span id="step-label" class="mono">—</span></div>
+    <div class="tree-body">
+      <div class="tree-scroll" id="tree"></div>
+      <aside class="side">
+        <div class="k"><span class="label">Принято на шаге</span><b id="k-acc">—</b><span class="mut" id="k-acc-sub"></span></div>
+        <div class="k"><span class="label">Среднее τ, токенов за шаг</span><b id="tau-mean" class="tau">—</b></div>
+        <div class="k"><span class="label">Токенов за шаг, все шаги</span><svg id="hist" width="260" height="150" viewBox="0 0 260 150" role="img" aria-label="Распределение принятых токенов за шаг, шкала от 1 до 10"></svg></div>
+      </aside>
+    </div>
+  </section>
+  <section class="panel config" aria-label="Конфигурация стенда">
+    <h2>Конфигурация</h2>
+    <dl class="cfg">
+      <div><dt>Таргеты</dt><dd id="cfg-target" class="mono">—</dd></div>
+      <div><dt>Движок</dt><dd id="cfg-engine">—</dd></div>
+      <div><dt>GPU</dt><dd id="cfg-gpu">—</dd></div>
+      <div><dt>Дерево драфтера</dt><dd id="cfg-tree">—</dd></div>
+    </dl>
+    <div class="cfg-scroll">
+      <table class="cfg-models">
+        <thead><tr><th>Модель</th><th>Таргет</th><th>Веса</th><th>Слои таргета</th><th>Нормировки EAGLE-3.1</th></tr></thead>
+        <tbody id="cfg-models"></tbody>
+      </table>
+    </div>
+    <p class="note">Слой i означает вход слоя i, как в коде авторов. В SGLang, NeMo и vLLM слои считаются по выходу, там это i − 1.</p>
+  </section>
+
+  <section class="team-sec" aria-label="Команда">
+    <h2><span class="neon-c">Команда</span></h2>
+    <div class="team" id="team"></div>
+  </section>
+</main>
+
+<footer><div class="wrap links">
+  <a href="https://github.com/stepankulibaba/yandex-research-program-eagle3" target="_blank" rel="noopener">Репозиторий</a> ·
+  <a href="https://github.com/WastingT-me/eagle3-demo" target="_blank" rel="noopener">Репозиторий демо</a> ·
+  <a href="https://arxiv.org/abs/2503.01840" target="_blank" rel="noopener">Статья EAGLE-3</a>
+</div></footer>
+
+<script src="assets/team.js"></script>
+<script src="assets/tree.js"></script>
+<script src="assets/demo.js"></script>
+</body>
+</html>

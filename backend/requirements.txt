@@ -1,0 +1,8 @@
+# сервер (обязательно)
+fastapi
+uvicorn[standard]
+# режим с GPU: код авторов EAGLE ставится отдельно (см. colab/eagle3_demo.ipynb)
+transformers==4.53.1
+accelerate
+safetensors
+huggingface_hub

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+sglwork/
+# фоновое видео и музыка живут на Google Диске (папка videos), в репозиторий не кладём
+site/assets/bg.mp4
+*.mp3
