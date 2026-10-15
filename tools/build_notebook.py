@@ -65,6 +65,11 @@ DRAFTERS = [
 ]
 # Фон страницы демо: папка на Google Диске с видео и mp3 (пусто = без фона), берётся первое по имени; оба по кругу.
 VIDEOS_DRIVE_DIR = "videos"
+# Постоянная ссылка: сайт на GitHub Pages находит этот сервер через секретный гист.
+# BACKEND_GIST - id гиста (конец его адреса); нужен секрет Colab GH_TOKEN (токен GitHub classic с правом gist).
+# Пусто - только временная ссылка trycloudflare.
+BACKEND_GIST = ""
+PAGES_URL = "https://wastingt-me.github.io/eagle3-demo"
 
 import os
 from google.colab import userdata
@@ -162,7 +167,19 @@ for line in tun.stdout:
         url = m.group(0); break
 # дочитываем вывод туннеля в фоне, иначе он остановится на полном буфере
 threading.Thread(target=lambda: [None for _ in tun.stdout], daemon=True).start()
-print("Демо:", url + "/demo.html")
+print("Демо (временная ссылка):", url + "/demo.html")
+if BACKEND_GIST:  # пишем текущий адрес туннеля в гист: по нему постоянная страница на GitHub Pages находит сервер
+    import json, time, urllib.request
+    try:
+        body = {"files": {"eagle3-backend.json": {"content": json.dumps(
+            {"url": url, "updated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())})}}}
+        req = urllib.request.Request("https://api.github.com/gists/" + BACKEND_GIST, method="PATCH",
+            data=json.dumps(body).encode(), headers={"Authorization": "Bearer " + userdata.get("GH_TOKEN"),
+                                                     "Accept": "application/vnd.github+json"})
+        urllib.request.urlopen(req, timeout=20)
+        print("Постоянная ссылка:", PAGES_URL.rstrip("/") + "/demo.html")
+    except Exception as e:
+        print("Не удалось записать адрес в гист (нужен секрет GH_TOKEN с правом gist):", e)
 """),
 md("""
 Если демо перестало открываться, перезапустите две последние ячейки. Лог сервера: `/content/server.log`.
