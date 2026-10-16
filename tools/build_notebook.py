@@ -25,7 +25,7 @@ def code(s): return {"cell_type": "code", "metadata": {}, "execution_count": Non
 
 cells = [
 md("""
-# EAGLE-3 DEMO
+# Демо EAGLE-3
 
 Ноутбук поднимает демо-сервер на GPU Colab и открывает его в интернет через Cloudflare Tunnel.
 Пул моделей, на странице выбираются любые две, все держатся на GPU сразу:

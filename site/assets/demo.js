@@ -417,14 +417,16 @@
   });
 
   // ---------- фоновое видео и музыка ----------
-  // Файлы лежат на демо-сервере (папка videos с Google Диска, см. ноутбук), иначе рядом с сайтом: assets/bg.mp4.
+  // Файлы лежат на демо-сервере (папка videos с Google Диска, см. ноутбук), иначе в site/assets/ (имена в assets/background.js).
   // Музыка - первый mp3 (или другой аудиофайл) из той же папки, по кругу; видео тогда всегда без звука.
   // Если аудиофайла нет, звучит само видео.
   const bgVideo = $("bg-video"), bgAudio = $("bg-audio");
   const snd = () => (bgAudio.src ? bgAudio : bgVideo);   // что сейчас даёт звук
   const fileUrl = (base, name) => base + "/videos/" + name.split("/").map(encodeURIComponent).join("/");
   async function loadBackground(base) {
-    let src = "assets/bg.mp4", music = "";
+    const local = window.BACKGROUND || {};
+    const asset = name => (name ? "assets/" + name.split("/").map(encodeURIComponent).join("/") : "");
+    let src = asset(local.video), music = asset(local.music);
     if (base) {
       try {
         const res = await (await fetch(base + "/api/videos")).json();
@@ -438,7 +440,7 @@
     v.loop = true; bgAudio.loop = true;
     v.onloadeddata = () => { document.body.classList.add("has-bg"); syncSound(); };
     v.onerror = () => { document.body.classList.remove("has-bg"); v.removeAttribute("src"); syncSound(); };
-    v.src = src;
+    if (src) v.src = src; else { v.removeAttribute("src"); document.body.classList.remove("has-bg"); }
     if (music) { bgAudio.src = music; v.muted = true; } else bgAudio.removeAttribute("src");
     syncSound();
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
