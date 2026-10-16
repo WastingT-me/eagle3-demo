@@ -232,15 +232,19 @@ class Engine:
         self.gpu, mem = _gpu()
         n = len(cfg.targets) + len(cfg.drafters)
         fits = int((mem - 2) // GB_PER_SERVER) if mem else n
-        if not cfg.max_servers and fits < n - sum(1 for t in cfg.targets if t.optional):
-            # каждый сервер SGLang держит свою копию таргета, поэтому все модели сразу нужны ~20 ГБ на модель
-            raise RuntimeError(f"все {n} модели сразу на {self.gpu} ({mem:.0f} ГБ) не помещаются: SGLang нужно "
-                               f"~{GB_PER_SERVER} ГБ на модель, то есть {n * GB_PER_SERVER + 2} ГБ. Возьмите H100 или A100 80 ГБ, "
-                               "или движок eagle (одна копия таргета на все драфтеры, помещается в 40 ГБ), "
-                               "или --max-servers 1 (модели будут перезагружаться)")
         opt_targets = {t.id for t in cfg.targets if t.optional}
         n_opt = len(opt_targets) + sum(1 for d in cfg.drafters if (d.target or cfg.targets[0].id) in opt_targets)
-        self.capacity = cfg.max_servers or min(n, max(fits, n - n_opt))
+        if not cfg.max_servers and fits < 2:
+            # каждый сервер SGLang держит свою копию таргета (~20 ГБ), для генерации двух моделей нужны два сервера
+            raise RuntimeError(f"на {self.gpu} ({mem:.0f} ГБ) не помещаются даже два сервера SGLang по ~{GB_PER_SERVER} ГБ. "
+                               "Возьмите H100 или A100 80 ГБ, или движок eagle (одна копия таргета на все драфтеры, "
+                               "помещается в 40 ГБ), или --max-servers 1 (модели будут перезагружаться)")
+        if not cfg.max_servers and fits < n - n_opt:
+            # все обязательные модели сразу не помещаются: на GPU держим сколько влезает, остальные
+            # поднимаются по запросу вместо давно не использованных (около минуты на смену)
+            print(f"[sglang] на {self.gpu} помещается {fits} серверов из {n - n_opt}: "
+                  "лишние модели будут загружаться по запросу", file=sys.stderr)
+        self.capacity = cfg.max_servers or min(n, fits)
         # --mem-fraction-static считается для каждого сервера отдельно при старте (см. _frac)
         self.need_gb = GB_PER_SERVER
         self.version = _sglang_version()
@@ -415,7 +419,7 @@ class Engine:
             time.sleep(2)
 
     def shutdown(self):
-        for srv in self.servers.values():
+        for srv in getattr(self, "servers", {}).values():  # конструктор мог упасть раньше
             if srv.proc:
                 srv.stop()
 

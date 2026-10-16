@@ -46,6 +46,8 @@ POOL = [
     {"id": "ours", "label": "ours", "kind": "drafter", "target": "llama", "layers": [16, 22, 29],
      "fc_norm": True, "norm_output": False, "path": "Funmagster/EAGLE3-Llama-3.1-8B-Instruct-L16-22-29-fcnorm",
      "p": 0.935},
+    {"id": "scratch", "label": "authors from scratch", "kind": "drafter", "target": "llama", "layers": [2, 16, 29],
+     "fc_norm": False, "norm_output": False, "path": "Funmagster/EAGLE3-Llama-3.1-8B-Instruct-L2-16-29-baseline", "p": 0.92},
     {"id": "dsl", "label": "DeepSeek-R1-Distill-Llama-8B", "kind": "target", "target": "dsl",
      "path": "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"},
 ]

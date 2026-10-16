@@ -36,10 +36,11 @@ md("""
 - **[target] Llama-3.1-8B-Instruct** генерирует без драфтера;
 - **[draft] authors**, официальный драфтер EAGLE-3 под Llama-3.1-8B-Instruct (`yuhuili/EAGLE3-LLaMA3.1-Instruct-8B`);
 - **[draft] ours**, наш драфтер под Llama-3.1-8B-Instruct (`Funmagster/EAGLE3-Llama-3.1-8B-Instruct-L16-22-29-fcnorm`, слои 16, 22, 29 и fc_norm);
-- **[target] DeepSeek-R1-Distill-Llama-8B** (`deepseek-ai/DeepSeek-R1-Distill-Llama-8B`), модель с рассуждением. Грузится последней и только если хватает видеопамяти: на GPU 80 ГБ с SGLang её не будет, на 96 ГБ она помещается.
+- **[draft] authors from scratch**, драфтер в раскладке авторов (слои 2, 16, 29, без fc_norm), который мы обучили с нуля (`Funmagster/EAGLE3-Llama-3.1-8B-Instruct-L2-16-29-baseline`);
+- **[target] DeepSeek-R1-Distill-Llama-8B** (`deepseek-ai/DeepSeek-R1-Distill-Llama-8B`), модель с рассуждением. Грузится последней и только если хватает видеопамяти: с движком EAGLE она помещается и на 80 ГБ; с SGLang (~20 ГБ на каждую модель) её не будет, пока все пять не влезают.
 
 Движок по умолчанию **код авторов EAGLE** (`ENGINE = "eagle"`): одна копия таргета на все драфтеры, помещается в 40 ГБ, и на странице видно дерево драфтера на каждом шаге.
-На странице демо движок можно сменить на **SGLang 0.5.9** (как в NeMo AutoModel и в замерах команды) и обратно. Смена занимает порядка 10 минут: сервер ставит SGLang (~5 ГБ, отдельное окружение на Python 3.12), освобождает GPU и перезагружает модели. SGLang держит свою копию таргета на каждую модель (~20 ГБ), дерево драфтера не отдаёт.
+На странице демо движок можно сменить на **SGLang 0.5.9** (как в NeMo AutoModel и в замерах команды) и обратно. Смена занимает порядка 10 минут: сервер ставит SGLang (~5 ГБ, отдельное окружение на Python 3.12), освобождает GPU и перезагружает модели. SGLang держит свою копию таргета на каждую модель (~20 ГБ): на 80 ГБ сразу живут три модели, остальные загружаются при выборе (около минуты). Дерево драфтера SGLang не отдаёт.
 
 1. **Runtime → Change runtime type → H100** или A100 (40 или 80 ГБ). Для показа включите **Background execution**, чтобы сессия жила при закрытой вкладке.
 2. **Нужен `HF_TOKEN`**: Llama-3.1-8B-Instruct закрыта лицензией Meta. Примите лицензию на странице модели на Hugging Face, затем слева значок ключа → секрет **`HF_TOKEN`** и доступ ноутбука к нему. Без токена демо не запустится.
@@ -66,6 +67,7 @@ TARGETS = [
 DRAFTERS = [
     ("authors", "authors",               "yuhuili/EAGLE3-LLaMA3.1-Instruct-8B",                     "llama"),
     ("ours",    "ours",                  "Funmagster/EAGLE3-Llama-3.1-8B-Instruct-L16-22-29-fcnorm", "llama"),
+    ("scratch", "authors from scratch",  "Funmagster/EAGLE3-Llama-3.1-8B-Instruct-L2-16-29-baseline",   "llama"),
 ]
 # Фон страницы демо: папка на Google Диске с видео и mp3 (пусто = без фона), берётся первое по имени; оба по кругу.
 VIDEOS_DRIVE_DIR = "videos"

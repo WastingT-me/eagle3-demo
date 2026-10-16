@@ -3,9 +3,10 @@
 Запуск с GPU:   python server.py                    (код авторов EAGLE; видно дерево на каждом шаге)
                 python server.py --engine sglang    (SGLang, как в NeMo; дерево драфтера не видно)
 Без GPU:        python server.py --mock
-Модели задаются флагами --target и --drafter (оба можно повторять). По умолчанию пул из четырёх:
+Модели задаются флагами --target и --drafter (оба можно повторять). По умолчанию пул из пяти:
   [target] Llama-3.1-8B-Instruct, [target] DeepSeek-R1-Distill-Llama-8B (если хватает видеопамяти),
-  [draft] authors (официальный драфтер EAGLE-3 под Llama) и [draft] ours (наш драфтер под Llama).
+  [draft] authors (официальный драфтер EAGLE-3 под Llama), [draft] ours (наш драфтер под Llama)
+  и [draft] authors from scratch (драфтер в раскладке авторов, обученный нами с нуля).
 Браузер выбирает любые две модели пула.
 
 Сайт отвечает сразу, модели грузятся в фоне: /api/info отдаёт state loading → ready (или failed).
@@ -34,7 +35,8 @@ ENGINES = {"eagle": "код авторов EAGLE", "sglang": "SGLang"}
 DEFAULT_TARGETS = ["llama=Llama-3.1-8B-Instruct=meta-llama/Llama-3.1-8B-Instruct",
                    "dsl=DeepSeek-R1-Distill-Llama-8B=deepseek-ai/DeepSeek-R1-Distill-Llama-8B=optional"]
 DEFAULT_DRAFTERS = ["authors=authors=yuhuili/EAGLE3-LLaMA3.1-Instruct-8B=llama",
-                    "ours=ours=Funmagster/EAGLE3-Llama-3.1-8B-Instruct-L16-22-29-fcnorm=llama"]
+                    "ours=ours=Funmagster/EAGLE3-Llama-3.1-8B-Instruct-L16-22-29-fcnorm=llama",
+                    "scratch=authors from scratch=Funmagster/EAGLE3-Llama-3.1-8B-Instruct-L2-16-29-baseline=llama"]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--mock", action="store_true", help="без GPU, синтетические шаги")
