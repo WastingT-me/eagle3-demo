@@ -662,7 +662,7 @@
     if (replay && replay.info && replay.info.models) {
       info = replay.info;
       const n = Object.keys(replay.runs).length;
-      if (!keepPill) setPill("replay", (replay.info.mock ? "Офлайн · синтетический пример" : "Офлайн · запись живого запуска") + ` · ${n} модели`);
+      if (!keepPill) setPill("replay", (replay.info.mock ? "Оффлайн · синтетический пример" : "Оффлайн · запись живого запуска") + ` · ${n} модели`);
       $("run").textContent = "Показать запись генерации";
       showConfig(replay.info);
       setModels(replay.info.models, m => !!replay.runs[m.id]);

@@ -4,6 +4,9 @@ import base64, gzip, io, json, os, sys, tarfile
 root = sys.argv[1] if len(sys.argv) > 1 else "."
 buf = io.BytesIO()
 
+MEDIA = (".mp4", ".webm", ".m4v", ".mov", ".ogv", ".mp3", ".m4a", ".aac", ".ogg", ".oga", ".opus", ".wav", ".flac")
+
+
 def clean(ti):
     ti.mtime, ti.uid, ti.gid, ti.uname, ti.gname = 0, 0, 0, "", ""
     ti.mode = 0o755 if ti.name.endswith(".sh") else 0o644
@@ -14,7 +17,8 @@ with gzip.GzipFile(fileobj=buf, mode="wb", mtime=0) as gz, tarfile.open(fileobj=
         for dp, dn, fn in os.walk(os.path.join(root, sub)):
             dn[:] = sorted(d for d in dn if d != "__pycache__")
             for f in sorted(fn):
-                if f.endswith(".pyc") or f.startswith("."):
+                # фон (видео и музыка) в ноутбук не кладём: на Colab он берётся с Google Диска
+                if f.endswith(".pyc") or f.startswith(".") or f.lower().endswith(MEDIA):
                     continue
                 full = os.path.join(dp, f)
                 tar.add(full, arcname=os.path.join("eagle3-demo", os.path.relpath(full, root)), filter=clean)
