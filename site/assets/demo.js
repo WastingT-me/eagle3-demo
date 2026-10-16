@@ -503,9 +503,24 @@
         cap.append(name.cloneNode(true));
         if (p.role) cap.append(role.cloneNode(true));
         cap.hidden = false;
-        // подпись появляется, когда до заголовка «Команда» докрутили (он на экране или выше)
-        const head = document.querySelector(".team-sec h2");
-        const sync = () => cap.classList.toggle("shown", !head || head.getBoundingClientRect().top < innerHeight);
+        // ПК: подпись появляется, когда до заголовка «Команда» докрутили (он на экране или выше).
+        // Телефон и планшет: когда пустой экран после команды (mentor-gap) открыт больше чем наполовину.
+        const head = document.querySelector(".team-sec h2"), gap = $("mentor-gap");
+        const narrow = matchMedia("(max-width: 1199.98px)");
+        const sync = () => {
+          let on;
+          if (narrow.matches) {
+            on = gap.offsetHeight > 0 && gap.getBoundingClientRect().top < innerHeight * .5;
+            // подпись стоит внизу экрана, а в самом конце страницы - над подвалом со ссылками
+            const foot = document.querySelector("footer"), seen = foot ? innerHeight - foot.getBoundingClientRect().top : 0;
+            cap.style.bottom = Math.max(76, seen + 14) + "px";
+          } else {
+            on = !head || head.getBoundingClientRect().top < innerHeight;
+            cap.style.bottom = "";
+          }
+          cap.classList.toggle("shown", on);
+          document.body.classList.toggle("mentor-view", on && narrow.matches);
+        };
         addEventListener("scroll", sync, { passive: true }); addEventListener("resize", sync); sync();
       }
     });
