@@ -49,6 +49,8 @@ parser.add_argument("--target", action="append", metavar="ID=ПОДПИСЬ=ПУ
                     help="можно несколько раз; optional - грузить, только если хватает видеопамяти")
 parser.add_argument("--drafter", action="append", metavar="ID=ПОДПИСЬ=ПУТЬ=ID_ТАРГЕТА", help="можно несколько раз")
 parser.add_argument("--videos", default="", help="папка с фоновым видео и музыкой страницы демо (берётся первое по имени)")
+parser.add_argument("--gist", default="", help="гист, куда класть последнюю сессию GPU для оффлайн-режима страницы "
+                    "(файл eagle3-replay.json; токен в переменной окружения GH_TOKEN)")
 parser.add_argument("--host", default="0.0.0.0")
 parser.add_argument("--port", type=int, default=8000)
 args = parser.parse_args()
@@ -185,6 +187,44 @@ def _switch(to):
     os.execv(py, [py, os.path.abspath(__file__), "--engine", to] + argv)
 
 
+# Последняя сессия GPU: все модели, прогнанные на одном запросе с одними настройками (как кнопка
+# «Скачать запись» на странице). После каждой полной генерации уходит в гист, оффлайн-страница играет её.
+session = None
+session_lock = threading.Lock()
+upload_wake = threading.Event()
+
+
+def record(prompt, max_new, temperature, runs):
+    global session
+    key = (state["engine"], prompt, max_new, temperature)
+    with session_lock:
+        if session is None or session["key"] != key:
+            session = {"key": key, "prompt": prompt, "info": engine.info(), "max_new_tokens": max_new,
+                       "temperature": temperature, "runs": {}}
+        session["runs"].update(runs)
+        session["recorded"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    upload_wake.set()
+
+
+def uploader():
+    """Кладёт последнюю сессию в гист; пока идёт загрузка, новые генерации только обновляют то, что уйдёт следующим."""
+    import urllib.request
+    token = os.environ.get("GH_TOKEN", "")
+    url = os.environ.get("GIST_API", "https://api.github.com") + "/gists/" + args.gist
+    while True:
+        upload_wake.wait(); upload_wake.clear()
+        with session_lock:
+            rec = {k: v for k, v in session.items() if k != "key"}
+            body = json.dumps({"files": {"eagle3-replay.json": {"content": json.dumps(rec, ensure_ascii=False)}}}).encode()
+        req = urllib.request.Request(url, data=body, method="PATCH", headers={
+            "Authorization": "Bearer " + token, "Accept": "application/vnd.github+json", "Content-Type": "application/json"})
+        try:
+            urllib.request.urlopen(req, timeout=60).read()
+            log(f"Оффлайн-запись обновлена: {len(rec['runs'])} модели, {len(body) // 1024} КБ")
+        except Exception as e:  # noqa: BLE001
+            log(f"Оффлайн-запись не ушла в гист: {e!r}")
+
+
 @app.websocket("/api/run")
 async def run(ws: WebSocket):
     global waiting
@@ -209,7 +249,11 @@ async def run(ws: WebSocket):
     except Exception as e:  # noqa: BLE001
         await ws.send_json({"type": "error", "message": f"плохой запрос: {e}"}); return
 
+    runs = {m: [] for m in lanes}
+
     def emit(ev):
+        if ev and ev.get("lane") in runs and ev.get("type") != "loading":
+            runs[ev["lane"]].append(ev)
         loop.call_soon_threadsafe(queue.put_nowait, ev)
 
     def work():
@@ -222,6 +266,9 @@ async def run(ws: WebSocket):
             try:
                 if not stop.is_set():
                     engine.run(lanes, prompt, max_new, temperature, emit, cancelled=stop.is_set)
+                    ends = [evs[-1] if evs else {} for evs in runs.values()]
+                    if args.gist and all(e.get("type") == "done" and e.get("stop") != "cancel" for e in ends):
+                        record(prompt, max_new, temperature, runs)
             except Exception as e:  # noqa: BLE001
                 emit({"type": "error", "message": repr(e)})
             finally:
@@ -274,4 +321,6 @@ if os.path.isdir(SITE):
 
 if __name__ == "__main__":
     threading.Thread(target=load, daemon=True).start()
+    if args.gist:
+        threading.Thread(target=uploader, daemon=True).start()
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")

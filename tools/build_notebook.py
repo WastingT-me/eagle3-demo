@@ -74,6 +74,7 @@ VIDEOS_DRIVE_DIR = "videos"
 # Постоянная ссылка: сайт на GitHub Pages находит этот сервер через секретный гист.
 # BACKEND_GIST - id гиста (конец его адреса); нужен секрет Colab GH_TOKEN (токен GitHub classic с правом gist).
 # Пусто - только временная ссылка trycloudflare. Без секрета GH_TOKEN ноутбук напишет, что адрес не записан, и демо работает по временной ссылке.
+# В тот же гист сервер кладёт последнюю сессию GPU (файл eagle3-replay.json): её играет страница, когда Colab выключен.
 BACKEND_GIST = "e7b489608c0c3c8eee1d15498a86872e"
 PAGES_URL = "https://wastingt-me.github.io/eagle3-demo"
 
@@ -129,6 +130,13 @@ if VIDEOS_DRIVE_DIR:
     except Exception as e:
         print("Google Диск не подключён, демо без фонового видео:", e)
 args = [PY, "server.py", "--engine", ENGINE, "--eagle-python", EAGLE_PY, "--sglang-python", SGLANG_PY] + (["--videos", VIDEOS] if VIDEOS else [])
+if BACKEND_GIST:  # последняя сессия GPU уходит в гист для оффлайн-режима страницы
+    try:
+        from google.colab import userdata
+        os.environ["GH_TOKEN"] = userdata.get("GH_TOKEN")
+        args += ["--gist", BACKEND_GIST]
+    except Exception as e:
+        print("нет секрета GH_TOKEN: оффлайн-страница не получит запись этой сессии:", e)
 for t in TARGETS:
     args += ["--target", "=".join(t)]
 for d in DRAFTERS:

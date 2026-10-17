@@ -672,12 +672,25 @@
     })();
   }
 
+  // оффлайн играет последнюю сессию GPU из гиста (её туда кладёт сервер Colab), без неё - пример из репозитория
+  async function lastSession() {
+    try {
+      const f = ((await gist()) || {})["eagle3-replay.json"];
+      if (!f) return null;
+      const rec = f.truncated ? await (await fetch(f.raw_url, { cache: "no-store" })).json() : JSON.parse(f.content);
+      return rec && rec.runs && Object.keys(rec.runs).length && rec.info ? rec : null;
+    } catch { return null; }
+  }
+
   async function loadReplay(keepPill) {
-    try { replay = await (await fetch("replay/sample.json")).json(); } catch { replay = null; }
+    replay = await lastSession();
+    if (!replay) try { replay = await (await fetch("replay/sample.json")).json(); } catch { replay = null; }
     if (replay && replay.info && replay.info.models) {
       info = replay.info;
       const n = Object.keys(replay.runs).length;
-      if (!keepPill) setPill("replay", (replay.info.mock ? "Оффлайн · синтетический пример" : "Оффлайн · запись живого запуска") + ` · ${n} модели`);
+      const when = replay.recorded ? " " + new Date(replay.recorded).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }) : "";
+      const what = replay.info.mock ? "синтетический пример" : replay.recorded ? "последняя сессия GPU" + when : "запись живого запуска";
+      if (!keepPill) setPill("replay", `Оффлайн · ${what} · ${n} ${n === 1 ? "модель" : n < 5 ? "модели" : "моделей"}`);
       $("run").textContent = "Показать запись генерации";
       showConfig(replay.info);
       setModels(replay.info.models, m => !!replay.runs[m.id]);
@@ -691,14 +704,16 @@
   const same = location.protocol.startsWith("http") ? location.origin : null;
   // постоянная ссылка: страница на GitHub Pages находит сервер Colab по <meta name="eagle3-backend">,
   // где "gist:ID" - гист, в который ноутбук при каждом запуске пишет текущий адрес туннеля (или сам адрес)
+  const gistMeta = ((document.querySelector('meta[name="eagle3-backend"]') || {}).content || "").trim();
+  let gistFiles = null;
+  function gist() {  // один запрос к гисту на загрузку страницы: у API GitHub лимит 60 запросов в час
+    if (!gistMeta.startsWith("gist:")) return Promise.resolve(null);
+    return gistFiles = gistFiles || fetch("https://api.github.com/gists/" + gistMeta.slice(5), { cache: "no-store" })
+      .then(r => r.json()).then(g => g.files || null).catch(() => null);
+  }
   async function fixedBackend() {
-    const v = ((document.querySelector('meta[name="eagle3-backend"]') || {}).content || "").trim();
-    if (!v.startsWith("gist:")) return v;
-    try {
-      const r = await fetch("https://api.github.com/gists/" + v.slice(5), { cache: "no-store" });
-      const f = (await r.json()).files["eagle3-backend.json"];
-      return JSON.parse(f.content).url || "";
-    } catch { return ""; }
+    if (!gistMeta.startsWith("gist:")) return gistMeta;
+    try { return JSON.parse((await gist())["eagle3-backend.json"].content).url || ""; } catch { return ""; }
   }
   const clean = u => u && u.replace(/\/+$/, "");
   fixedBackend().then(fixed => connect([clean(param), same, clean(fixed), store.get("eagle3-backend")]));
